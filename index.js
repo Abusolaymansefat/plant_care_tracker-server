@@ -43,6 +43,9 @@ const client = new MongoClient(process.env.MONGODB_URI, {
   },
 })
 async function run() {
+
+  const db = client.db('plantcare-tracker-admin')
+  const plantsCollection = db.collection('plants')
   try {
     // Generate jwt token
     app.post('/jwt', async (req, res) => {
@@ -71,6 +74,20 @@ async function run() {
       } catch (err) {
         res.status(500).send(err)
       }
+    })
+
+    //add a plant in db 
+
+    app.post('/add-plant', async (req, res) => {
+      const plant = req.body
+      const result = await plantsCollection.insertOne(plant)
+      res.send(result)
+    })
+
+    //get api plants data form db 
+    app.get('/plants', async (req, res) => {
+      const result = await plantsCollection.find().toArray()
+      res.send(result)
     })
 
     // Send a ping to confirm a successful connection
