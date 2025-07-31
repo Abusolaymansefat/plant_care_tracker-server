@@ -46,6 +46,7 @@ const client = new MongoClient(process.env.MONGODB_URI, {
 async function run() {
   const db = client.db("plantcare-tracker-admin");
   const plantsCollection = db.collection("plants");
+  const ordersCollection = db.collection("orders");
   try {
     // Generate jwt token
     app.post("/jwt", async (req, res) => {
@@ -118,6 +119,14 @@ async function run() {
       });
       res.send({clientSecret: client_secret});
     });
+
+
+    //seve order data in orders ca=ollection in db
+    app.post('/order', async (req, res)=> {
+      const orderData = req.body
+      const result = await ordersCollection.insertOne(orderData)
+      res.send(result)
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
