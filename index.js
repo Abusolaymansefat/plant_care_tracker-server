@@ -47,6 +47,7 @@ async function run() {
   const db = client.db("plantcare-tracker-admin");
   const plantsCollection = db.collection("plants");
   const ordersCollection = db.collection("orders");
+  const usersCollection = db.collection("users");
   try {
     // Generate jwt token
     app.post("/jwt", async (req, res) => {
@@ -110,23 +111,50 @@ async function run() {
       const totalPrice = quantity * plant?.price * 100;
 
       //stripe
-      const {client_secret} = await stripe.paymentIntents.create({
+      const { client_secret } = await stripe.paymentIntents.create({
         amount: totalPrice,
         currency: "usd",
         automatic_payment_methods: {
           enabled: true,
         },
       });
-      res.send({clientSecret: client_secret});
+      res.send({ clientSecret: client_secret });
     });
 
+    //seve or update a users info in db
+    app.post("/user", async (req, res) => {
+      const userData = req.body;
+      userData.role = "customer";
+      userData.create_at = Date.now();
+      userData.last_loggedIn = Date.now();
+
+      const query = {
+        email: userData?.email,
+      };
+      const alreadyExists = await usersCollection.findOne(query);
+      console.log("user already exists : ", !!alreadyExists);
+
+      if (!!alreadyExists) {
+        console.log("updet.......");
+        const result = await usersCollection.updateOne(query, {
+          $set: { last_loggedIn: Date.now() },
+        });
+        return res.send(result);
+      }
+
+      console.log("create user data .....");
+
+      // console.log(userData)
+      const result = await usersCollection.insertOne(userData);
+      res.send(result);
+    });
 
     //seve order data in orders ca=ollection in db
-    app.post('/order', async (req, res)=> {
-      const orderData = req.body
-      const result = await ordersCollection.insertOne(orderData)
-      res.send(result)
-    })
+    app.post("/order", async (req, res) => {
+      const orderData = req.body;
+      const result = await ordersCollection.insertOne(orderData);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
