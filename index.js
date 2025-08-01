@@ -125,8 +125,8 @@ async function run() {
     app.post("/user", async (req, res) => {
       const userData = req.body;
       userData.role = "customer";
-      userData.create_at = Date.now();
-      userData.last_loggedIn = Date.now();
+      userData.create_at = new Date().toISOString();
+      userData.last_loggedIn = new Date().toISOString();
 
       const query = {
         email: userData?.email,
@@ -137,7 +137,7 @@ async function run() {
       if (!!alreadyExists) {
         console.log("updet.......");
         const result = await usersCollection.updateOne(query, {
-          $set: { last_loggedIn: Date.now() },
+          $set: { last_loggedIn: new Date().toISOString() },
         });
         return res.send(result);
       }
@@ -148,6 +148,16 @@ async function run() {
       const result = await usersCollection.insertOne(userData);
       res.send(result);
     });
+
+
+    // get a user's role 
+    app.get('/user/role/:email', async(req, res) => {
+      const email= req.params.email
+      const result = await usersCollection.findOne({ email })
+      if(!result) return res.status(404).send({message: 'user not found '})
+      res.send({ role: result?.role})
+    })
+
 
     //seve order data in orders ca=ollection in db
     app.post("/order", async (req, res) => {
