@@ -149,15 +149,13 @@ async function run() {
       res.send(result);
     });
 
-
-    // get a user's role 
-    app.get('/user/role/:email', async(req, res) => {
-      const email= req.params.email
-      const result = await usersCollection.findOne({ email })
-      if(!result) return res.status(404).send({message: 'user not found '})
-      res.send({ role: result?.role})
-    })
-
+    // get a user's role
+    app.get("/user/role/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await usersCollection.findOne({ email });
+      if (!result) return res.status(404).send({ message: "user not found " });
+      res.send({ role: result?.role });
+    });
 
     //seve order data in orders ca=ollection in db
     app.post("/order", async (req, res) => {
@@ -167,22 +165,33 @@ async function run() {
     });
 
     // update plant quantity (increase/ decrease)
-    app.patch('/quantity-update/:id', async (req, res) => {
-      const id = req.params.id
-      const {quantityToUpdate, status} = req.body
-      const filter = { _id: new ObjectId(id)}
+    app.patch("/quantity-update/:id", async (req, res) => {
+      const id = req.params.id;
+      const { quantityToUpdate, status } = req.body;
+      const filter = { _id: new ObjectId(id) };
       const updateDoc = {
         $inc: {
-          quantity: 
-           status === 'increase' ? quantityToUpdate: - quantityToUpdate, // increase decrease quantity 
+          quantity:
+            status === "increase" ? quantityToUpdate : -quantityToUpdate, // increase decrease quantity
         },
-      }
+      };
 
-      const result = await plantsCollection.updateOne(filter, updateDoc)
-      console.log(result)
-      res.send(result)
-  
-    })
+      const result = await plantsCollection.updateOne(filter, updateDoc);
+      console.log(result);
+      res.send(result);
+    });
+
+    // get all users for admin
+    app.get("/all-users", verifyToken, async (req, res) => {
+      console.log(req.user);
+      const filter = {
+        email: {
+          $ne: req?.user?.email,
+        },
+      };
+      const result = await usersCollection.find(filter).toArray();
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
