@@ -193,21 +193,67 @@ async function run() {
       res.send(result);
     });
 
-    // update a user's role 
-    app.patch('/user/role/update/:email', verifyToken, async (req, res) => {
-      const email = req.params.email
-      const {role} = req.body
-      const filter = {email: email}
+    // update a user's role
+    app.patch("/user/role/update/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const { role } = req.body;
+      const filter = { email: email };
       const updateDoc = {
         $set: {
           role,
-          status: 'verified',
+          status: "verified",
+        },
+      };
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
 
-        }
+    // become seller request
+    app.patch(
+      "/become-seller-request/:email",
+      verifyToken,
+      async (req, res) => {
+        const email = req.params.email;
+        const filter = { email: email };
+        const updateDoc = {
+          $set: {
+            status: "requested",
+          },
+        };
+        const result = await usersCollection.updateOne(filter, updateDoc);
+        res.send(result);
       }
-      const result = await usersCollection.updateOne(filter, updateDoc)
-      res.send(result)
-    })
+    );
+
+    // admin stats
+    app.get("/admin-stats", async (req, res) => {
+      const totalUser = await usersCollection.estimatedDocumentCount();
+      const totalPlant = await plantsCollection.estimatedDocumentCount();
+
+      // mongodb aggregation
+      const result = await ordersCollection
+        .aggregate([
+          {
+            $addFields: {
+              createdAt: { $toDate: "$_id" },
+            },
+          },
+          {
+            $group: {
+              _id: {
+                $dateToString: {
+                  format: "%Y-%m-%d", // দিন-ভিত্তিক group
+                  date: "$createdAt",
+                },
+              },
+              totalOrders: { $sum: 1 },
+              totalRevenue: { $sum: '$price' },
+            },
+          },
+        ])
+        .toArray();
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
