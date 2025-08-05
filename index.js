@@ -229,30 +229,47 @@ async function run() {
     app.get("/admin-stats", async (req, res) => {
       const totalUser = await usersCollection.estimatedDocumentCount();
       const totalPlant = await plantsCollection.estimatedDocumentCount();
+      const totalOrder = await ordersCollection.estimatedDocumentCount();
 
       // mongodb aggregation
       const result = await ordersCollection
         .aggregate([
           {
+            // covert id into date
             $addFields: {
               createdAt: { $toDate: "$_id" },
             },
           },
           {
+            //Group data by date
             $group: {
               _id: {
                 $dateToString: {
-                  format: "%Y-%m-%d", // দিন-ভিত্তিক group
+                  format: "%Y-%m-%d",
                   date: "$createdAt",
                 },
               },
-              totalOrders: { $sum: 1 },
-              totalRevenue: { $sum: '$price' },
+              revenue: { $sum: "$price" },
+              order: { $sum: 1 },
             },
           },
         ])
         .toArray();
-      res.send(result);
+
+      const barChartData = result.map((data) => ({
+        date: data._id,
+        revenue: data.revenue,
+        order: data.order,
+      }));
+      const totalRevenue = result.reduce((sum, data) => sum + data?.revenue, 0);
+
+      res.send({
+        totalUser,
+        totalPlant,
+        barChartData,
+        totalOrder,
+        totalRevenue,
+      });
     });
 
     // Send a ping to confirm a successful connection
