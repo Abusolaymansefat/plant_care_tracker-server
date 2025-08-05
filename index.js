@@ -49,6 +49,24 @@ async function run() {
   const ordersCollection = db.collection("orders");
   const usersCollection = db.collection("users");
   try {
+    const verifyAdmin = async (req, res, next) => {
+      const email = req?.user?.email;
+      const user = await usersCollection.findOne({ email });
+      if (!user || user?.role !== "admin")
+        return res.status(403).send({ message: "admin only actions! " });
+
+      next();
+    };
+
+    const verifySeller = async (req, res, next) => {
+      const email = req?.user?.email;
+      const user = await usersCollection.findOne({ email });
+      if (!user || user?.role !== "seller")
+        return res.status(403).send({ message: "seller only actions! " });
+
+      next();
+    };
+
     // Generate jwt token
     app.post("/jwt", async (req, res) => {
       const email = req.body;
@@ -80,7 +98,7 @@ async function run() {
 
     //add a plant in db
 
-    app.post("/add-plant", async (req, res) => {
+    app.post("/add-plant", verifyToken, verifySeller, async (req, res) => {
       const plant = req.body;
       const result = await plantsCollection.insertOne(plant);
       res.send(result);
@@ -164,6 +182,41 @@ async function run() {
       res.send(result);
     });
 
+    // get all order info for customer
+    app.get("/order/customer/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const filter = { "customer.email": email };
+      const result = await ordersCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    
+
+    // get all order info for seller
+    app.get(
+      "/order/seller/:email",
+      verifyToken,
+      verifySeller,
+      async (req, res) => {
+        const email = req.params.email;
+        const filter = { "seller.email": email };
+        const result = await ordersCollection.find(filter).toArray();
+        res.send(result);
+      }
+    );
+
+    app.patch("/orders/:id", async (req, res) => {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const result = await ordersCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: status } }
+      );
+
+      res.send(result);
+    });
+
     // update plant quantity (increase/ decrease)
     app.patch("/quantity-update/:id", async (req, res) => {
       const id = req.params.id;
@@ -182,7 +235,7 @@ async function run() {
     });
 
     // get all users for admin
-    app.get("/all-users", verifyToken, async (req, res) => {
+    app.get("/all-users", verifyToken, verifyAdmin, async (req, res) => {
       console.log(req.user);
       const filter = {
         email: {
@@ -194,19 +247,24 @@ async function run() {
     });
 
     // update a user's role
-    app.patch("/user/role/update/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      const { role } = req.body;
-      const filter = { email: email };
-      const updateDoc = {
-        $set: {
-          role,
-          status: "verified",
-        },
-      };
-      const result = await usersCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/user/role/update/:email",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const { role } = req.body;
+        const filter = { email: email };
+        const updateDoc = {
+          $set: {
+            role,
+            status: "verified",
+          },
+        };
+        const result = await usersCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    );
 
     // become seller request
     app.patch(
@@ -226,7 +284,7 @@ async function run() {
     );
 
     // admin stats
-    app.get("/admin-stats", async (req, res) => {
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
       const totalUser = await usersCollection.estimatedDocumentCount();
       const totalPlant = await plantsCollection.estimatedDocumentCount();
       const totalOrder = await ordersCollection.estimatedDocumentCount();
