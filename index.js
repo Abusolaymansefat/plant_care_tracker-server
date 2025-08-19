@@ -98,7 +98,7 @@ async function run() {
 
     //add a plant in db
 
-    app.post("/add-plant", verifyToken, verifySeller, async (req, res) => {
+    app.post("/add-plant", async (req, res) => {
       const plant = req.body;
       const result = await plantsCollection.insertOne(plant);
       res.send(result);
@@ -139,33 +139,30 @@ async function run() {
       res.send({ clientSecret: client_secret });
     });
 
-    //seve or update a users info in db
-    app.post("/user", async (req, res) => {
-      const userData = req.body;
-      userData.role = "customer";
-      userData.create_at = new Date().toISOString();
-      userData.last_loggedIn = new Date().toISOString();
-
+    // save or update a users info in db
+    app.post('/user', async (req, res) => {
+      const userData = req.body
+      userData.role = 'customer'
+      userData.created_at = new Date().toISOString()
+      userData.last_loggedIn = new Date().toISOString()
       const query = {
         email: userData?.email,
-      };
-      const alreadyExists = await usersCollection.findOne(query);
-      console.log("user already exists : ", !!alreadyExists);
-
+      }
+      const alreadyExists = await usersCollection.findOne(query)
+      console.log('User already exists: ', !!alreadyExists)
       if (!!alreadyExists) {
-        console.log("updet.......");
+        console.log('Updating user data......')
         const result = await usersCollection.updateOne(query, {
           $set: { last_loggedIn: new Date().toISOString() },
-        });
-        return res.send(result);
+        })
+        return res.send(result)
       }
 
-      console.log("create user data .....");
-
-      // console.log(userData)
-      const result = await usersCollection.insertOne(userData);
-      res.send(result);
-    });
+      console.log('Creating user data......')
+      // return console.log(userData)
+      const result = await usersCollection.insertOne(userData)
+      res.send(result)
+    })
 
     // get a user's role
     app.get("/user/role/:email", async (req, res) => {
@@ -189,8 +186,6 @@ async function run() {
       const result = await ordersCollection.find(filter).toArray();
       res.send(result);
     });
-
-    
 
     // get all order info for seller
     app.get(
