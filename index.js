@@ -140,29 +140,29 @@ async function run() {
     });
 
     // save or update a users info in db
-    app.post('/user', async (req, res) => {
-      const userData = req.body
-      userData.role = 'customer'
-      userData.created_at = new Date().toISOString()
-      userData.last_loggedIn = new Date().toISOString()
+    app.post("/user", async (req, res) => {
+      const userData = req.body;
+      userData.role = "customer";
+      userData.created_at = new Date().toISOString();
+      userData.last_loggedIn = new Date().toISOString();
       const query = {
         email: userData?.email,
-      }
-      const alreadyExists = await usersCollection.findOne(query)
-      console.log('User already exists: ', !!alreadyExists)
+      };
+      const alreadyExists = await usersCollection.findOne(query);
+      console.log("User already exists: ", !!alreadyExists);
       if (!!alreadyExists) {
-        console.log('Updating user data......')
+        console.log("Updating user data......");
         const result = await usersCollection.updateOne(query, {
           $set: { last_loggedIn: new Date().toISOString() },
-        })
-        return res.send(result)
+        });
+        return res.send(result);
       }
 
-      console.log('Creating user data......')
+      console.log("Creating user data......");
       // return console.log(userData)
-      const result = await usersCollection.insertOne(userData)
-      res.send(result)
-    })
+      const result = await usersCollection.insertOne(userData);
+      res.send(result);
+    });
 
     // get a user's role
     app.get("/user/role/:email", async (req, res) => {
@@ -194,7 +194,7 @@ async function run() {
       verifySeller,
       async (req, res) => {
         const email = req.params.email;
-        const filter = { "seller.email": email };
+        const filter = { "seller.email": email, status: "paid" };
         const result = await ordersCollection.find(filter).toArray();
         res.send(result);
       }
@@ -203,7 +203,7 @@ async function run() {
     app.patch("/orders/:id", async (req, res) => {
       const { id } = req.params;
       const { status } = req.body;
-      
+
       const result = await ordersCollection.updateOne(
         { _id: new ObjectId(id) },
         { $set: { status: status } }
