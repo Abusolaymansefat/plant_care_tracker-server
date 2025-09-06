@@ -194,7 +194,11 @@ async function run() {
       verifySeller,
       async (req, res) => {
         const email = req.params.email;
-        const filter = { "seller.email": email, status: "paid" };
+        const paidOnly = req.query.paidOnly === "true";
+        const filter = { "seller.email": email };
+        if (paidOnly) {
+          filter.status = "paid";
+        }
         const result = await ordersCollection.find(filter).toArray();
         res.send(result);
       }
@@ -211,7 +215,15 @@ async function run() {
 
       res.send(result);
     });
-
+    
+    // delete an order
+    app.delete("/orders/:id", verifyToken, async (req, res) => {
+      const { id } = req.params;
+      const result = await ordersCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+      res.send(result);
+    });
     // update plant quantity (increase/ decrease)
     app.patch("/quantity-update/:id", async (req, res) => {
       const id = req.params.id;
