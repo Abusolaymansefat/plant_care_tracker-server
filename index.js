@@ -104,16 +104,39 @@ async function run() {
       res.send(result);
     });
 
-    //get api plants data form db
+    // ✅ Get All Plants
     app.get("/plants", async (req, res) => {
       const result = await plantsCollection.find().toArray();
       res.send(result);
     });
 
-    //get a single plants data form db
+    // ✅ Get Single Plant
     app.get("/plant/:id", async (req, res) => {
       const id = req.params.id;
-      const result = await plantsCollection.findOne({
+      const result = await plantsCollection.findOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
+    // ✅ Update Plant
+    app.patch("/plant/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedPlant = { ...req.body };
+
+      // Remove _id from the update object
+      delete updatedPlant._id;
+
+      const result = await plantsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updatedPlant }
+      );
+
+      res.send(result);
+    });
+
+    // ✅ Delete Plant
+    app.delete("/plant/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await plantsCollection.deleteOne({
         _id: new ObjectId(id),
       });
       res.send(result);
@@ -215,7 +238,7 @@ async function run() {
 
       res.send(result);
     });
-    
+
     // delete an order
     app.delete("/orders/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
